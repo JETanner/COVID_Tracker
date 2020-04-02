@@ -254,7 +254,7 @@ def WebCSV(URL):
 def GetData(Type = "web", Save = True, Files = []):
     if Type == "web":
         #Checks for old data first:
-        if "Data" not in globals().keys(): globals()["Data"] = {}  
+        if  "Data" not in globals().keys(): globals()["Data"] = {}  
         Data = globals()["Data"]
         if Data == {} or "Time" not in Data.keys(): 
             Data = GetData("web-old", False)
@@ -288,14 +288,16 @@ def GetData(Type = "web", Save = True, Files = []):
                     if y[3] == "US":
                         if not y[2] in States.keys(): y[2] = "Other"
                         y[2] = States[y[2]]
-                            
+                        
+                        #print(y)
+                        #sys.exit()
                         for i,x in enumerate([C,D,R]):
                             if len(Data[St][y[2]][x]) <= Last: 
-                                Data[St][y[2]].update({x:Data[St][y[2]][x] + Blank[len(Data[St][y[2]][x]):] + [int(y[7+1])]})
+                                Data[St][y[2]].update({x:Data[St][y[2]][x] + Blank[len(Data[St][y[2]][x]):] + [int(y[7+i])]})
                                 
                             else:
                                 Temp = Data[St][y[2]][x]
-                                Temp[Last] = int(y[7+i])
+                                Temp[Last] += int(y[7+i])
                                 Data[St][y[2]].update({x:Temp})
                     
                     for y in [C,D,R]:
@@ -992,7 +994,7 @@ class MultiTableInput(ttk.Frame):
         self.MaxRows      = max(self.Size[1], MaxRows)
         self.MaxColumns   = max(self.Size[0], MaxColumns)
         self.MaxRows_b    = max(len(self.WidgetOpt), self.MaxRows)
-        self.MaxColumns_b = max(*[len(x) for x in self.WidgetOpt], self.MaxColumns)
+        self.MaxColumns_b = max(max([len(x) for x in self.WidgetOpt] +[0]), self.MaxColumns)
             
         if self.SY != 0: self.MaxRows    = self.MaxRows_b
         if self.SX != 0: self.MaxColumns = self.MaxColumns_b
@@ -1355,7 +1357,7 @@ class MainGUI:
         
         #Defualt Fonts - For use if word length and word wrapping need to be set
         #tkFont.Font(font='TkDefaultFont').configure()
-        self.FONT = tkFont.Font(family = 'DejaVu Sans', weight = 'normal', slant = 'roman', overstrike = 0, underline = 0, size = -SizeSet(28, {"windows": 9}))
+        self.FONT = tkFont.Font(family = 'DejaVu Sans', weight = 'normal', slant = 'roman', overstrike = 0, underline = 0, size = -SizeSet(18, {"windows": 9}))
 	    
         self.Pages = []
         self.PageW = {}
@@ -1373,7 +1375,7 @@ class MainGUI:
 
         self.Vars = Vars
         
-        self.BaseCS = {"type":"label", "textvariable":"Waiting for input...", "Options" : {"borderwidth" :2, "font" : self.FONT, "wraplength" : SizeSet(.55, {"android": .5}, 1,  False) * self.Res[0]}}
+        self.BaseCS = {"type":"label", "textvariable":"Waiting for input...", "Options" : {"borderwidth" :2, "font" : self.FONT, "wraplength" : SizeSet(.55, {"android": .52}, 1,  False) * self.Res[0]}}
 
         if Tables != []:
             #Add Main Page: !frame
@@ -1425,7 +1427,7 @@ class MainGUI:
         GridMake(self.Pages[Ref], self.GridRows, self.GridColumns, self.Res, (self.GridRows-1)/self.GridRows)
         
         #Current Status (Bottom)
-        self.PageW[Ref].update({"CS": MultiTableInput(self.Pages[Ref], [[{"type":"label", "textvariable":"Waiting for input...", "Options" : {"borderwidth" :2, "font" : self.FONT, "wraplength" : SizeSet(.55, {"android": .5}, 1,  False) * self.Res[0]}}]], SizeSet([1,1,.6,.1], {"android": [1,2,.6,.15]}, self.Res), [0.1, 0.1, 0, 0], True, True, Master = self)})
+        self.PageW[Ref].update({"CS": MultiTableInput(self.Pages[Ref], [[self.BaseCS]], SizeSet([1,1,.6,.1], {"android": [1,1,.6,.15]}, self.Res), [0.1, 0.1, 0, 0], True, True, Master = self)})
         self.PageW[Ref]["CS"].grid(row = SizeSet(40, {"android": 35}), column = 0, rowspan = SizeSet(10,{"android":15}), columnspan = 60, sticky = 'NSEW')
         self.PageW[Ref]["CS"].Update([[self.BaseCS]],False,False,[["Waiting for input..."]])
         
@@ -1533,9 +1535,9 @@ class MainGUI:
             ESTs.update({x: {y:max(ESTx[x][y]) if isinstance(ESTx[x][y], list) and ESTx[x][y] != [] else ESTx[x][y] for y in ESTx[x].keys()}})
         
         if Opt["ZeroX"] == True:
-            Lim0 = 30 #10 seems to aim a bit low for non uncontrolled growth - make adjustable************
+            Lim0 = 10 #10 seems to aim a bit low for non uncontrolled growth - make adjustable************ - changed to death instead of confirmed (this does not change estimation as well though - should have an additional factor for confirmed vs. death time and growtg rate used 10 for now
             
-            SD0 = [ [i for i,y in enumerate(self.Data[P][x[0]][C]) if y > Lim0] if x[0] in self.PL else [i for i,y in enumerate(self.Data[St][x[0]][C]) if y > Lim0] if x[0] in self.SL else max(int(self.Vars[x[3]]["Start Date"]), 0) for x in SubData]
+            SD0 = [ [i for i,y in enumerate(self.Data[P][x[0]][D]) if y > Lim0] if x[0] in self.PL else [i for i,y in enumerate(self.Data[St][x[0]][D]) if y > Lim0] if x[0] in self.SL else max(int(self.Vars[x[3]]["Start Date"]) + MI(self.Vars[x[3]]["Average time to death"])  + 10 , 0) for x in SubData]
             SD0 = [0 if x == [] else x[0] if isinstance(x,list) else x for x in SD0]
             LineD = []
         else:
@@ -1557,7 +1559,7 @@ class MainGUI:
         
         SubData.update({"Print" : [[self.PrintKey(x, self.Vars[x], ESTs[x])] for x in ESTs.keys()]})
         
-        if "Preview" in self.PageW[Ref].keys():
+        if "Preview" in self.PageW[Ref].keys() and "Data" in self.PageW[Ref].keys():
             plt.close(self.PageW[Ref]["Data"]["Plot"])
             for widget in self.PageW[Ref]["PreviewFrame"].winfo_children(): widget.destroy()
 
