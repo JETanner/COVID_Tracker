@@ -623,7 +623,8 @@ def Extrapolate(Val, ETime = 365):
            "Health care system over ran dates": Flag, 
            "Compartments": [len(x) for x in EST],
            "No symptoms recovery by day": LS(EST, 15, True),
-           "No symptoms recovery total": LS(EST, 16, True)}
+           "No symptoms recovery total": LS(EST, 16, True),
+           "Per million (Pop) Deaths": ML( LS(EST, 10, True), ((1e6)/Pop), None, None, False  )}
     return Est
 
 
@@ -634,14 +635,14 @@ def Extrapolate(Val, ETime = 365):
 class GPlot:
     def __init__(self, PData = [], DateLines = [], Legend = [], StartDate = dt(2020,1,22), LOGY = False, LOGX = False, Range = [], YLines = [], FillR = []):
     
-        self.Lines     = []
+        self.Lines         = []
         self.DateLines = DateLines
-        self.YLines    = YLines
-        self.Range     = Range
-        self.PData     = PData
-        self.StartDate = StartDate
-        self.Legend    = Legend
-        self.FillR     = FillR
+        self.YLines       = YLines
+        self.Range        = Range
+        self.PData        = PData
+        self.StartDate  = StartDate
+        self.Legend      = Legend
+        self.FillR           = FillR
     
         plt.style.use("seaborn")
         plt.rcParams['xtick.minor.size'] = 1
@@ -770,7 +771,7 @@ def IndexedCommand(Item = None, Index = None, keyword = None, Master = None):
         WO = Item.WidgetOpt
         if CV[Index[0]][0].lower() == "estimation": 
             #Current widget setup
-            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day"]}
+            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day", "Compartments", "No symptoms recovery by day", "No symptoms recovery total", "Per million (Pop) Deaths"]}
             WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : "", "postcommand" : WO[1][3]["postcommand"], "ComboList" : list(Master.Vars.keys()) + ["Modify"]}
             Item.Update(WO, False, False, CV)
         if CV[Index[0]][0].lower() != "estimation":
@@ -791,7 +792,7 @@ def IndexedCommand(Item = None, Index = None, keyword = None, Master = None):
             WO = Item.WidgetOpt
             CV[Index[0]][0] = "Estimation"
             #Current widget setup
-            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day"]}
+            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day", "Compartments", "No symptoms recovery by day", "No symptoms recovery total", "Per million (Pop) Deaths"]}
             NewN = [x[0] for x in CV if x[0] in Master.Vars.keys()]
             if NewN ==[]: NewN = [list(Master.Vars.keys())[0]]
             WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : NewN[0], "postcommand" : WO[1][3]["postcommand"], "ComboList" : list(Master.Vars.keys()) + ["Modify"]}
@@ -1497,16 +1498,16 @@ class MainGUI:
         
     def SaveGraph(self, Table, Ref, Type = "png"):
         self.PageW[Ref]["Data"]["Plot"].savefig("COVID - %d.%s" % (Ref, Type), format = Type)
-        with open("COVID (EST) - %d.txt" % (Ref), "w") as OF: OF.write(self.PageW[Ref]["Data"]["Print"])
+        with open("COVID (EST) - %d.txt" % (Ref),  "w") as OF: OF.write("\n\n\n".join(self.PageW[Ref]["Data"]["Print"]))
 
     def PrintKey(self, Place, Vs, Vs2):
-        P0  = [C,D,S,ByDGD,I,"Indirect COVID deaths - Total","Total deaths","Normal non COVID deaths in same period","Normal non COVID deaths by day"]
+        P0  = [C,D,S,ByDGD,I,"Indirect COVID deaths - Total","Total deaths","Normal non COVID deaths in same period","Normal non COVID deaths by day", "Per million (Pop) Deaths"]
         P1 = {i:Vs2[x] for i,x in enumerate(P0)}
         
         #"Health care system overrun # of sick"
         #"Average time to detection"
         
-        PrintKeyS = f"%s population %s (Est): Started on %s with R0 = %s and social distancing effects on: %s | Avg time of - Transmission: %s, Incubation: %s, Death: %s, Recovery: %s, Effective Immunity: %s | Totals - Confirmed: {P1[0]:,}, Direct Deaths: {P1[1]:,}, Indirect Deaths: {P1[5]:,}, Total COVID deaths: {P1[6]:,} | Max - Deaths in 1 day: {P1[3]:,}, Sick at once: {P1[2]:,}, Mortality Rate: %s/%s, Normal deaths in same period/per day: {P1[7]:,}/{P1[8]:,}\n" % (Place, "{:,}".format(Vs["Population"]), Date(Vs["Start Date"],"custom",Custom = "%m/%d/%Y"), "{:.2f}".format(Vs["Growth Rate"]), " ".join([":".join([Date(x,"custom",Custom = "%m/%d"),"{:.2f}".format(1/Vs["Social Distancing - Change"][i])]) for i,x in enumerate(Vs["Social Distancing - Change Dates"])]), "{:.2f}".format(Vs["Mean Infection Time"]), "{:.2f}".format(Vs["Average infected to symptoms"]), "{:.2f}".format(Vs["Average time to death"]), "{:.2f}".format(Vs["Average time to recovery"]), "{:.2f}".format(Vs["Average Effective Immunity Duraration"]), "{:.2f}".format(Vs["Death Rate"]), "{:.2f}".format(Vs["Death Rate - Health care system overran"]))
+        PrintKeyS = f"%s population %s (Est): Started on %s with R0 = %s and social distancing effects on: %s | Avg time of - Transmission: %s, Incubation: %s, Death: %s, Recovery: %s, Effective Immunity: %s | Totals - Confirmed: {P1[0]:,}, Direct Deaths: {P1[1]:,}, Indirect Deaths: {P1[5]:,}, Total COVID deaths: {P1[6]:,} | Max - Deaths in 1 day: {P1[3]:,}, Deaths (direct) per million: {P1[9]}, Sick at once: {P1[2]:,}, Mortality Rate: %s/%s, Normal deaths in same period/per day: {P1[7]:,}/{P1[8]:,}\n" % (Place, "{:,}".format(Vs["Population"]), Date(Vs["Start Date"],"custom",Custom = "%m/%d/%Y"), "{:.2f}".format(Vs["Growth Rate"]), " ".join([":".join([Date(x,"custom",Custom = "%m/%d"),"{:.2f}".format(1/Vs["Social Distancing - Change"][i])]) for i,x in enumerate(Vs["Social Distancing - Change Dates"])]), "{:.2f}".format(Vs["Mean Infection Time"]), "{:.2f}".format(Vs["Average infected to symptoms"]), "{:.2f}".format(Vs["Average time to death"]), "{:.2f}".format(Vs["Average time to recovery"]), "{:.2f}".format(Vs["Average Effective Immunity Duraration"]), "{:.2f}".format(Vs["Death Rate"]), "{:.2f}".format(Vs["Death Rate - Health care system overran"]))
 
         return PrintKeyS
             
@@ -1623,14 +1624,14 @@ class MainGUI:
 
             
 SVarD = {"Base": {"Start Date": 0, 
-         "Growth Rate": 2.1, 
+         "Growth Rate": 2.0, 
          "Death Rate": 0.01, 
          "Death Rate - Health care system overran": 0.04, 
          "Health care system overrun # of sick": MI(12*7.7e5), 
          "Social Distancing - Change Dates": [], 
          "Social Distancing - Change": [], 
          "Population": 7.7e9, 
-         "Average time to death": 19, 
+         "Average time to death": 14, 
          "Average time to recovery": 31, 
          "Average time to detection": 10,
          "Normal daily mortality rate (per million)": 8.1,
@@ -1639,7 +1640,7 @@ SVarD = {"Base": {"Start Date": 0,
          "Normal ICU need by day": MI(4e6/365),
          "Average infected to symptoms": 3.5,
          "COVID ICU need rate": 0.05,
-         "Average Effective Immunity Duraration": 90, 
+         "Average Effective Immunity Duraration": 180, 
          "Compartment Size": 1e6,
          "Mean Infection Time" : 5, 
          "Average detection rate of non ICU or deaths": .9,
