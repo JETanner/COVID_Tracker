@@ -1,25 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
 Info = """Simple self contained program for UI -> COVID
 Written By: Joshua Tanner
 
 Self Running Notes:
-changing file type to .pyw and setting to open with pythonw.exe works. 
-However it is best to have:
-1.) A non anaconda version of python installed for self runs (installer can set to sys path): https://www.python.org/downloads/
-2.) Updated Pip (not neccesary):
-    -Set permenant SSL trusted for PIP (to avoid SSL error): pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org pip setuptools
-3.) Make sure the dependencies load as per the below (and check them individually if possible)
-    -command prompt (as administrator or using sudo) can install individually if need be (pip install ***)
-    -instant crash means it failed
-    -it may not work programmatically with missing libraries unless it can be elevated to admin
+changing file type to .pyw and setting to open with pythonw.exe works, however it is best to have:
+    1.) A non anaconda version of python installed for self runs (installer can set to sys path): 
+        https://www.python.org/downloads/
+    2.) Updated Pip (not neccesary):
+        -Set permenant SSL trusted for PIP (to avoid SSL error): 
+            pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org pip setuptools
+    3.) Make sure the dependencies load as per the below (and check them individually if possible)
+        -command prompt (as administrator or using sudo) can install individually if need be (pip install ***)
+        -instant crash means it failed
+        -it may not work programmatically with missing libraries unless it can be elevated to admin
     
 Note: If Anaconda Python was installed to path (it is not recommended) then hunting down all reg keys is needed
 """
+
+#WIP Notes:
+#Modify can be passed to Var fix this
+#Finish "Special" Operations button integration
+
 #____________________________________________________________________________________________________________
 #Libraries
 
@@ -44,6 +47,7 @@ import datetime                       #For WebData Time Formating
 from datetime import datetime as dt   #For WebData Time Formating 
 import functools as ft
 import math
+import re
 
 try:    
     import urllib.request as request      #For WebData
@@ -75,12 +79,10 @@ def install_and_import(package, Overwrite = False, VarUpdate = None):
     
     if Overwrite or package not in globals().keys(): 
         try:
-#             __import__('messages_en', globals={"__name__": __name__})
             globals()[package] = __import__(package, globals = globals())
         
             return "Library loaded: %s" % package
         except ImportError:
-#         except:
             try:
                 pip = __import__("pip", globals = globals())
     
@@ -109,17 +111,18 @@ def install_and_import(package, Overwrite = False, VarUpdate = None):
 Windows = [] #Top level window holder
 
 class PopUpWindow:
-    def __init__(self, master, msg = "", Addons = [], Size = [], Pad = [0, 0, 0, 0], AdjSize = False, YScroll = False, XScroll = False, LibLoad = None, MainMaster = None):
+    def __init__(self, master, msg = "", Addons = [], Size = [], Pad = [0, 0, 0, 0], AdjSize = False, 
+                 YScroll = False, XScroll = False, LibLoad = None, MainMaster = None):
         
-        self.master = master
-        self.Master = MainMaster
-        self.Count = 0
-        self.msg = StringVar()
+        self.master  = master
+        self.Master  = MainMaster
+        self.Count   = 0
+        self.msg     = StringVar()
         self.msg.set(msg)
         self.LibLoad = LibLoad
-        self.Size = Size
+        self.Size    = Size
         
-        LabelNote = Label(master, textvariable = self.msg, justify = "left")
+        LabelNote    = Label(master, textvariable = self.msg, justify = "left")
         
         if "MultiTableInput" in globals().keys() and Addons != []:
             
@@ -130,23 +133,27 @@ class PopUpWindow:
                 ExitButton.pack()
             else:
                 LabelNote.grid(row = 0, column = 0, columnspan = self.Size[0], sticky = "NWES")
-                XAddons = MultiTableInput(master, Addons, self.Size[:3] + [int(round(self.Size[3]* self.Size[1]/(self.Size[1]+2+1)))], Pad, AdjSize, YScroll, XScroll, Master = MainMaster)
+                XAddons = MultiTableInput(master, Addons, 
+                                          self.Size[:3] + [int(round(self.Size[3]* self.Size[1]/(self.Size[1]+2+1)))], 
+                                          Pad, AdjSize, YScroll, XScroll, Master = MainMaster)
                 XAddons.grid(row = 1, column = 0, rowspan = self.Size[1], columnspan = self.Size[0], sticky = "NWES")
                 ExitButton = Button(master, text = "Cancel", command = lambda: self.master.destroy())
                 ExitButton.grid(row = self.Size[1] + 1, column = 0, columnspan = self.Size[0], sticky = "NWES")
-                for i in range(2 + self.Size[1]+1): master.rowconfigure(i, weight = 1, minsize = int(round(self.Size[3]/(self.Size[1]+2))))
-                for i in range(self.Size[0]): master.columnconfigure(i, weight = 1, minsize = int(round(self.Size[2]/self.Size[0])))
+                for i in range(2 + self.Size[1]+1): 
+                    master.rowconfigure(i, weight = 1, minsize = int(round(self.Size[3]/(self.Size[1]+2))))
+                for i in range(self.Size[0]): 
+                    master.columnconfigure(i, weight = 1, minsize = int(round(self.Size[2]/self.Size[0])))
                 
         elif Addons != []:
             LabelNote.pack()
-            FailNote = Label(master, text = "Program Failure", justify = "left")
+            FailNote   = Label(master, text = "Program Failure", justify = "left")
             FailNote.pack()
             ExitButton = Button(master, text = "Exit", width = 400, command = lambda: self.master.destroy())
             ExitButton.pack()
             ExitButton.focus_set()
         else:
             LabelNote.pack()
-            self.Load = LibLoad
+            self.Load      = LibLoad
             ContinueButton = Button(master, text = "Continue", width = 400, command = lambda: self.Run(self.Count, self.msg))
             ContinueButton.pack()
             ContinueButton.focus_set()
@@ -155,44 +162,38 @@ class PopUpWindow:
 
     def Run(self, Count, Note):
         if self.LibLoad != None and Count < len(self.Load):
-#             for x in self.Load: Note.set(install_and_import(x, Overwrite = False, VarUpdate = Note))
             Note.set(install_and_import(self.Load[Count], Overwrite = False, VarUpdate = Note))
             self.Count += 1
         else:
             self.Master.destroy()
             
-def PopUp(msg = "", Addons = [], Size = [], Pad = [0, 0, 0, 0], AdjSize = False, YScroll = False, XScroll = False, Load = None, Master = None):
+def PopUp(msg = "", Addons = [], Size = [], Pad = [0, 0, 0, 0], AdjSize = False, YScroll = False, XScroll = False, 
+          Load = None, Master = None):
     global Windows
     
-#     Windows += [Tk()] #Main Loop
     Windows += [Toplevel()]
     Windows[-1].wm_title("Notice")
     if Size != []: Windows[-1].geometry("%dx%d" % (Size[2], Size[3]))                     
     Windows += [PopUpWindow(Windows[-1], msg, Addons, Size, Pad, 
           AdjSize, YScroll, XScroll, Load, Master)]  
     
-#     Windows[-2].mainloop() #This is only for main loop
-    
 NonStandardLibs = ["urllib.request", "numpy", "matplotlib"]                   
 CLI = sys.argv
 
 if Fail:
     if len([x for x in CLI if ".json" in x]) > 0 or len([x for x in CLI if ".json" not in x]) <= 2:                     
-        Windows += [PopUp("Failed to Load Libraries\nAttempting Dependency Install...", Load = NonStandardLibs)]
-#         Windows[-2].mainloop() #****************        
-        if len([x for x in NonStandardLibs if x not in globals().keys()])>0: sys.exit("Failed to load")
+        Windows += [PopUp("Failed to Load Libraries\nAttempting Dependency Install...", Load = NonStandardLibs)]       
+        if len([x for x in NonStandardLibs if x not in globals().keys()])>0: 
+            sys.exit("Failed to load")
     else:
         for x in NonStandardLibs: print(install_and_import(x, Overwrite = False))
 
 #Sub non standard libraries
-import urllib.request as request      #For WebData
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import urllib.request as request                                 #For WebData
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  #For Graphs
 
-#Base Settings - Global
+#Base Settings - Global Variable
 Settings = {"Size": [], "OS": ""}
-
-#___________________________________________________________________________
-#Read and calculate from CSV Data
 
 #Typical Types/Shorthands
 C = "Confirmed"
@@ -207,7 +208,20 @@ ByDGD = "By Day Growth: Deaths"
 ByDGS = "By Day Growth: Sick"
 
 St = "State"
-States = {'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD', 'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY', "District of Columbia" : "DC", "Other" : "Others (Puerto Rico etc..)"}
+States = {'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA', 
+          'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA', 
+          'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS', 
+          'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD', 'Massachusetts': 'MA', 
+          'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO', 'Montana': 'MT', 
+          'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 
+          'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 
+          'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD',
+          'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+          'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY', "District of Columbia" : "DC", 
+          "Other" : "Others (Puerto Rico etc..)"}
+
+#___________________________________________________________________________
+#Read and calculate from CSV Data
 
 #Process Date Info
 def Date(In, Out = "num", Day0 = dt(2020, 1, 22), Custom = "%m-%d-%Y"):    
@@ -247,7 +261,7 @@ def Date(In, Out = "num", Day0 = dt(2020, 1, 22), Custom = "%m-%d-%Y"):
 #Get CSV from website
 def WebCSV(URL):
     Out = request.urlopen(URL).read().decode('utf8').split("\n")
-    Out = [x.replace("\"", "").replace("\'", "").replace(", ", " - ").replace("\r","").replace("*","").split(",") for x in Out]
+    Out = [re.sub(r"[\"\'\*(\\r)]", "", x).replace(", ", " - ").split(",") for x in Out]
     return Out
 
 #Either Read saved file (old) or get from the web
@@ -363,7 +377,9 @@ def ProcessRaw(Data):
     for x in [C, R, D]:
         Times  = [Date(y, "num") for y in Data[x]["Raw"][0][4:] if Date(y, "num") not in Data["Time"]]
         Places = [y[1] for y in Data[x]["Raw"][1:] if len(Data[x]["Raw"]) > 1 and len(y)>1 and y[1] not in Data[P].keys()]
-        State  = [y[0].split(" - ")[-1].strip(" ") if len(y[0].split(" - ")) > 1 else States[y[0].strip(" ")] if y[0] in States else States["Other"] for y in Data[x]["Raw"][1:] if y[0] != "" and y[0] not in Data[St].keys() and y[1].upper() == "US"]
+        State  = [y[0].split(" - ")[-1].strip(" ") if len(y[0].split(" - ")) > 1 else States[y[0].strip(" ")] 
+                  if y[0] in States else States["Other"] for y in Data[x]["Raw"][1:] 
+                  if y[0] != "" and y[0] not in Data[St].keys() and y[1].upper() == "US"]
         
         Data.update({"Time": sorted(Data["Time"] + Times)})
         for y in Places: Data[P].update({y:{}})
@@ -377,8 +393,10 @@ def ProcessRaw(Data):
         NewT = Blank
         qTime = [Date(q, "num") for q in Data[x]["Raw"][0][4:]]
         for z in Data[x]["Raw"][1:]:
-            New  = [0 if y not in qTime or z[4:][qTime.index(y)] == '' or qTime.index(y)>=len(z[4:]) else int(z[4:][qTime.index(y)]) for y in Data["Time"]]
-            New  = [y if i == 0 or (y == 0 and len([q for q in New[:i+1] if q!=0]) == 0) else [q for q in New[:i+1] if q!=0][-1] for i,y in enumerate(New)]
+            New  = [0 if y not in qTime or z[4:][qTime.index(y)] == '' or qTime.index(y)>=len(z[4:]) else 
+                    int(z[4:][qTime.index(y)]) for y in Data["Time"]]
+            New  = [y if i == 0 or (y == 0 and len([q for q in New[:i+1] if q!=0]) == 0) else 
+                    [q for q in New[:i+1] if q!=0][-1] for i,y in enumerate(New)]
             NewT = [y + NewT[i] for i,y in enumerate(New)] 
             Data[P][z[1]].update({x:[y + Data[P][z[1]][x][i] for i,y in enumerate(New)]})
             if z[0] != "" and z[0] not in Data[St].keys() and z[1].upper() == "US":
@@ -407,10 +425,6 @@ def CalcData(SubData):
     SubData.update({ByDGD: [0] + [x - DL[i] for i,x in enumerate(DL[1:])]}) # By day growth rate death
     
     return SubData
-
-
-# In[2]:
-
 
 #_________________________________________________________________________
 
@@ -457,7 +471,8 @@ def NDist(mean = 0, sigma = None, factor = 1, sfact = 4):
         sigma = (mean/sfact)**0.5
     else:
         sfact = 1
-    Dist = [(factor/(sigma*((2*math.pi)**.5)))*math.exp(-.5*(((x-mean)/sigma)**2)) for x in range(MI(mean-sigma**2),MI(mean+(sigma**2)*sfact))]
+    Dist = [(factor/(sigma*((2*math.pi)**.5)))*math.exp(-.5*(((x-mean)/sigma)**2)) 
+            for x in range(MI(mean-sigma**2),MI(mean+(sigma**2)*sfact))]
     Dist = ML(Dist, (factor/sum(Dist)), 0, None, False) #To make sure distribution is "complete" in this small arc
     return Dist
     
@@ -541,8 +556,12 @@ def Extrapolate(Val, ETime = 365):
             z[6] += z[5]
                           
             #Health care over run effect (flag dates)
-            if z[4]*ICUR + CS*NICUP/Pop > CS*DCAP/Pop and (i==0 or len(EST[2]) < n or EST[-2][n][2] + CS*NICUP/Pop < CS*DCAP/Pop): Flag[i][n] += i+1-min(SD,0)
-            if z[4]*ICUR + CS*NICUP/Pop < CS*DCAP/Pop and (i==0 or (len(EST[-2]) > n and EST[-2][n][2] + CS*NICUP/Pop > CS*DCAP/Pop)): Flag[i][n] += -i-1+min(SD,0)
+            if z[4]*ICUR + CS*NICUP/Pop > CS*DCAP/Pop and (i==0 or len(EST[2]) < n or 
+                                          EST[-2][n][2] + CS*NICUP/Pop < CS*DCAP/Pop): 
+                Flag[i][n] += i+1-min(SD,0)
+            if z[4]*ICUR + CS*NICUP/Pop < CS*DCAP/Pop and (i==0 or (len(EST[-2]) > n and 
+                                          EST[-2][n][2] + CS*NICUP/Pop > CS*DCAP/Pop)): 
+                Flag[i][n] += -i-1+min(SD,0)
                           
             #Died (total, directly, and indirectly) taken from sick (effects hospital use)
             z[9]   = ML(EST, TD, 3, n, False)
@@ -552,7 +571,6 @@ def Extrapolate(Val, ETime = 365):
                 for m,x in enumerate(z[9]): 
                     if len(EST) > m and len(EST[-m]) > n: 
                         EST[-m][n][3] = max(0, EST[-m][n][3] - x)
-#                         EST[-m][n][1] = max(0, EST[-m][n][1] - x)
                 z[9]   = min(MI(sum(z[9])), SP)
                 z[10] += z[9]
             else:
@@ -560,11 +578,12 @@ def Extrapolate(Val, ETime = 365):
                                 
             #Indirect Deaths
             #How to triage?
-            z[11]  = min(SP+ML(EST, EID, 7, n)+ML(EST, EID, 15, n), MI(abs(NICU - OICU) * max(0, (CS * NICUP/Pop) - min(max(0,(CS * (DCAP-NICUP)/Pop)- (z[4] * ICUR)), CS * NICUP/Pop))))
+            z[11]  = min(SP + ML(EST, EID, 7, n) + ML(EST, EID, 15, n), 
+                         MI(abs(NICU - OICU) * max(0, (CS * NICUP/Pop) - min(max(0,(CS * (DCAP-NICUP)/Pop)- (z[4] * ICUR)), 
+                                                                             CS * NICUP/Pop))))
             z[12] += z[11]
                                     
-            #Adjust sick totals by deaths
-#             z[2] += -z[10]                  
+            #Adjust sick totals by deaths               
             z[4] += -z[10]  
                                 
             #Newly Recovered (from sick)
@@ -602,8 +621,7 @@ def Extrapolate(Val, ETime = 365):
         ICU += max(0, (LS(EST[-1],14)/ICU) * max(ML([len(EST[n + 1]) - len(x) for n, x in enumerate(EST[:-1])], MIT), (LS(EST[-1], 14)/MI(ICU))**(2/len(MIT))))
         ICU  = min(Pop/CS, ICU)
         EST[-1] += [EST0] * max(0,(MI(ICU) - len(EST[-1])))
-                        
-    #Day(0) - only the first one is "real" day, Newly Infected(1), Total Infected(2), Newly Sick (3), Sick(4), Sick - Confirmed (5), Confirmered (6), Recovered (day) (7), Total Recovered (8), Died (9), Direct Deaths (10), Indirect COVID deaths - by day(11), Indirect COVID death total(12), Reproduction Number(13), Growth Rate (14), non sick recoveries (lower suseciptible still) (15 - by day, 16 total)     
+                           
     Est = {"Time": [x[0][0] + min(0,SD) for x in EST], 
            I: MI([x+LS(EST, 4, True)[i] for i,x in enumerate(LS(EST, 2, True))]), 
            S: LS(EST, 4, True), 
@@ -627,25 +645,22 @@ def Extrapolate(Val, ETime = 365):
            "Per million (Pop) Deaths": ML( LS(EST, 10, True), ((1e6)/Pop), None, None, False  )}
     return Est
 
-
-# In[ ]:
-
-
 #Plot Data (Class Style)
 class GPlot:
-    def __init__(self, PData = [], DateLines = [], Legend = [], StartDate = dt(2020,1,22), LOGY = False, LOGX = False, Range = [], YLines = [], FillR = []):
+    def __init__(self, PData = [], DateLines = [], Legend = [], StartDate = dt(2020,1,22), LOGY = False, 
+                 LOGX = False, Range = [], YLines = [], FillR = []):
     
-        self.Lines         = []
+        self.Lines     = []
         self.DateLines = DateLines
-        self.YLines       = YLines
-        self.Range        = Range
-        self.PData        = PData
-        self.StartDate  = StartDate
-        self.Legend      = Legend
-        self.FillR           = FillR
+        self.YLines    = YLines
+        self.Range     = Range
+        self.PData     = PData
+        self.StartDate = StartDate
+        self.Legend    = Legend
+        self.FillR     = FillR
     
         plt.style.use("seaborn")
-        plt.rcParams['xtick.minor.size'] = 1
+        plt.rcParams['xtick.minor.size']  = 1
         plt.rcParams['xtick.minor.width'] = 1
         plt.rcParams.update({'font.size': SizeSet(8, {"android": 14}) })
         plt.rcParams.update({'font.weight': "bold"})
@@ -661,7 +676,8 @@ class GPlot:
 
         LS = ["dashed" if "estimate" in x else "solid" for x in self.Legend]
         
-        for i,x in enumerate(self.PData): self.Lines += [self.ax.plot(*x, linewidth = SizeSet(1, {"android": 3},1,False), linestyle = LS[i])]
+        for i,x in enumerate(self.PData): self.Lines += [self.ax.plot(*x, linewidth = SizeSet(1, {"android": 3},1,False),
+                                                                      linestyle = LS[i])]
         MaxY   = max([max(y[1]) for y in self.PData])
         
         #Range filled cases
@@ -684,7 +700,8 @@ class GPlot:
             for x in self.YLines: self.ax.plot(RangeX, [x]*2)
 
         #Plot Legend
-        self.ax.legend(self.Legend + [Date(x, "str", self.StartDate) for x in self.DateLines] + [x for x in self.YLines], fontsize = SizeSet(6, {"android": 14},1 ,False))
+        self.ax.legend(self.Legend + [Date(x, "str", self.StartDate) for x in self.DateLines] + [x for x in self.YLines],
+                       fontsize = SizeSet(6, {"android": 14},1 ,False))
         
         #Log scaling
         if LOGX: self.ax.set_yscale("log")
@@ -694,7 +711,9 @@ class GPlot:
         plt.tight_layout(pad = 0.25)
         
         #Hover anotation 
-        self.annot = self.ax.annotate("", xy=(0,0), xytext=(0,0), textcoords='axes pixels', wrap = True, bbox = dict(boxstyle="round", fc="w"), arrowprops=dict(facecolor='navy', width = .5, headwidth = 5))
+        self.annot = self.ax.annotate("", xy=(0,0), xytext=(0,0), textcoords='axes pixels', wrap = True, 
+                                      bbox = dict(boxstyle="round", fc="w"), 
+                                      arrowprops=dict(facecolor='navy', width = .5, headwidth = 5))
         self.annot.set_visible(False)
 
     #Try except in a list comprehension
@@ -719,7 +738,9 @@ class GPlot:
                 index = np.argwhere(x == int(round(event.xdata)))[0][0]
                 self.annot.xy = (x[index], y[index])
                 x2,y2 = self.ax.transData.transform((x[index], y[index]))
-                text  = "%s\n(%s): %s" % (self.Legend[self.lines], Date(int(x[index]), "custom", self.StartDate, "%m/%d"), str(y[index]))
+                text  = "%s\n(%s): %s" % (self.Legend[self.lines], 
+                                          Date(int(x[index]), "custom", self.StartDate, "%m/%d"),
+                                          str(y[index]))
                 self.annot._x = max(min(Settings["Size"][0]*.6*.8, x2), 200) - 200
                 self.annot._y = max(0, min(y2, SizeSet(.35, {"android":.3})*.95 - 150)) + 50
                 self.annot.set_text(text)
@@ -747,7 +768,8 @@ def SizeSet(Base = [1, 1, 1, 1], OSFlag = {}, Size = [], MultiplyCheck = True):
     if Settings["OS"] in OSFlag.keys():
         if not isinstance(OSFlag[Settings["OS"]],list): OSFlag[Settings["OS"]] = [OSFlag[Settings["OS"]]]
         if MultiplyCheck:
-            Size = OSFlag[Settings["OS"]][:-len(Size)] + [x if x > 1 else int(round(x * Size[i])) for i,x in enumerate(OSFlag[Settings["OS"]][-len(Size):])]
+            Size = OSFlag[Settings["OS"]][:-len(Size)] + [x if x > 1 else int(round(x * Size[i])) 
+                                                          for i,x in enumerate(OSFlag[Settings["OS"]][-len(Size):])]
         else:
             Size = OSFlag[Settings["OS"]]
     else:
@@ -771,8 +793,20 @@ def IndexedCommand(Item = None, Index = None, keyword = None, Master = None):
         WO = Item.WidgetOpt
         if CV[Index[0]][0].lower() == "estimation": 
             #Current widget setup
-            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day", "Compartments", "No symptoms recovery by day", "No symptoms recovery total", "Per million (Pop) Deaths"]}
-            WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : "", "postcommand" : WO[1][3]["postcommand"], "ComboList" : list(Master.Vars.keys()) + ["Modify"]}
+            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", 
+                                "ComboList" : Master.TypeOptions + ["Sick - Confirmed", 
+                                                                    "Growth Rate", 
+                                                                    "Newly Sick", 
+                                                                    "Infected", 
+                                                                    "Total deaths by day", 
+                                                                    "Total deaths", 
+                                                                    "Indirect COVID deaths - Total", 
+                                                                    "Indirect COVID deaths - by day", 
+                                                                    "Compartments", "No symptoms recovery by day", 
+                                                                    "No symptoms recovery total", 
+                                                                    "Per million (Pop) Deaths"]}
+            WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : "", "postcommand" : WO[1][3]["postcommand"],
+                                "ComboList" : list(Master.Vars.keys()) + ["Modify"]}
             Item.Update(WO, False, False, CV)
         if CV[Index[0]][0].lower() != "estimation":
             WO[Index[0]][0] = Master.BaseTable[1][0]
@@ -787,22 +821,50 @@ def IndexedCommand(Item = None, Index = None, keyword = None, Master = None):
 #                 NewN = ["CUSTOM %d" % (len(Master.Vars.keys())+1)]
             VarSet = [[x, str(Master.Vars[NewN[0]][x])] for x in sorted(Master.Vars[NewN[0]].keys())]
             CV[Index[0]][-1] = NewN[0]
-            Windows += [PopUp("Modify Variables:", [[{"type" : "label", "Options" : {"text" : "Name:"}}, {"type" : "list", "State" : CV[Index[0]][-1], "postcommand": "VarName_%s_%d" % (keyword.split("_")[1], Index[0]), "ComboList" : Master.Vars.keys()}], [{"type" : "label", "Options" : {"text" : "Save"}}, {"type" : "button", "command" : "SaveVar_%s_%d" % (keyword.split("_")[1], Index[0]), "Options" : {"text" : "Save"}, "columnspan": 2}], [{"type" : "label", "Options" : {"text" : "Variable"}}, {"type" : "label", "Options" : {"text" : "Current Value"}}]] + [[{"type" : "label", "Options" : {"text" : x[0], "font": Master.FONT, "wraplength" : SizeSet(200*.9 ,{"android":.4*.9})}}, {"type" : "entry", "State" : x[1]}] for x in VarSet] + [[{"type" : "button", "command" : "Special_%s" % (keyword.split("_")[1]), "Options" : {"text" : "Range Fill"}, "columnspan": 1}, {"type" : "entry", "State" : "[[]]"}]], SizeSet([2, min(len(VarSet)+ 3,15), 400, 600] ,{"android":[2, min(len(VarSet)+ 3, 7), .4, .88]}), [0,0,0,0], True, True, Master = Master)]
+            Windows += [PopUp("Modify Variables:", [[{"type" : "label", "Options" : {"text" : "Name:"}}, 
+                             {"type" : "list", "State" : CV[Index[0]][-1], 
+                                                      "postcommand": "VarName_%s_%d" % (keyword.split("_")[1], Index[0]),
+                              "ComboList" : Master.Vars.keys()}], [{"type" : "label", "Options" : {"text" : "Save"}}, 
+                             {"type" : "button", "command" : "SaveVar_%s_%d" % (keyword.split("_")[1], Index[0]), 
+                              "Options" : {"text" : "Save"}, "columnspan": 2}], 
+                            [{"type" : "label", "Options" : {"text" : "Variable"}}, 
+                             {"type" : "label", "Options" : {"text" : "Current Value"}}]] + [[{"type" : "label",
+                              "Options" : {"text" : x[0], "font": Master.FONT, 
+                              "wraplength" : SizeSet(200*.9 ,{"android":.4*.9})}}, 
+                             {"type" : "entry", "State" : x[1]}] for x in VarSet] + [[{"type" : "button", 
+                              "command" : "Special_%s" % (keyword.split("_")[1]), "Options" : {"text" : "Range Fill"},
+                                                                                       "columnspan": 1}, 
+                             {"type" : "entry", "State" : "[[]]"}]], SizeSet([2, min(len(VarSet)+ 3,15), 400, 600],
+                                      {"android":[2, min(len(VarSet)+ 3, 7), .4, .88]}), 
+                          [0,0,0,0], True, True, Master = Master)]
+            
         if CV[Index[0]][-1].lower() == "estimation" or CV[Index[0]][0].lower() == "estimation":
             WO = Item.WidgetOpt
             CV[Index[0]][0] = "Estimation"
             #Current widget setup
-            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions + ["Sick - Confirmed", "Growth Rate", "Newly Sick", "Infected", "Total deaths by day", "Total deaths", "Indirect COVID deaths - Total", "Indirect COVID deaths - by day", "Compartments", "No symptoms recovery by day", "No symptoms recovery total", "Per million (Pop) Deaths"]}
+            WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", 
+                                "ComboList" : Master.TypeOptions + ["Sick - Confirmed", 
+                                                                    "Growth Rate", 
+                                                                    "Newly Sick",
+                                                                    "Infected", 
+                                                                    "Total deaths by day", 
+                                                                    "Total deaths",
+                                                                    "Indirect COVID deaths - Total", 
+                                                                    "Indirect COVID deaths - by day", 
+                                                                    "Compartments", 
+                                                                    "No symptoms recovery by day", 
+                                                                    "No symptoms recovery total", 
+                                                                    "Per million (Pop) Deaths"]}
             NewN = [x[0] for x in CV if x[0] in Master.Vars.keys()]
             if NewN ==[]: NewN = [list(Master.Vars.keys())[0]]
             WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : NewN[0], "postcommand" : WO[1][3]["postcommand"], "ComboList" : list(Master.Vars.keys()) + ["Modify"]}
             Item.Update(WO, False, False, CV)
         else:
             WO = Item.WidgetOpt
-#             CV[Index[0]][0] = "Estimation"
             #Current widget setup
             WO[Index[0]][1]  = {"type" : "list", "Options" : {}, "State" : "", "ComboList" : Master.TypeOptions}
-            WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : "", "postcommand" : WO[1][3]["postcommand"], "ComboList" : Master.DefOptions}
+            WO[Index[0]][3]  = {"type" : "list", "Options" : {}, "State" : "", "postcommand" : WO[1][3]["postcommand"],
+                                "ComboList" : Master.DefOptions}
             Item.Update(WO, False, False, CV)
             
     elif keyword[:7] == "VarName":
@@ -900,7 +962,7 @@ class AutocompleteCombobox(ttk.Combobox):
                 self.select_range(self.position, END)
 
     def handle_keyrelease(self, event):
-        """event handler for the keyrelease event on this widget"""
+        #Event handler for the keyrelease event on this widget
         if event.keysym == "BackSpace":
                 self.delete(self.index(INSERT), END)
                 self.position = self.index(END)
@@ -915,7 +977,6 @@ class AutocompleteCombobox(ttk.Combobox):
         if len(event.keysym) == 1:
                 self.autocomplete()
 
-        # No need for up/down, we'll jump to the popup
         # list at the position of the autocompletion
         self.onselect(event)
                 
@@ -923,7 +984,8 @@ class AutocompleteCombobox(ttk.Combobox):
 #Add Row and Coloumn now just comes from Update command which either appends to self.WidgetOpts and overwrites it. Remove and Reset and Clear are also all similarly controlled.
 class MultiTableInput(ttk.Frame):
     
-    def __init__(self, parent, WidgetIndex = [[{}]], Size = [1, 1, 200, 100], Pad = [0, 0, 0, 0], AdjSize = True, YScroll = False, XScroll = False, Master = None):
+    def __init__(self, parent, WidgetIndex = [[{}]], Size = [1, 1, 200, 100], Pad = [0, 0, 0, 0], 
+                 AdjSize = True, YScroll = False, XScroll = False, Master = None):
         
         #Scroll bar size adjustment
         self.SX = 0
@@ -966,15 +1028,14 @@ class MultiTableInput(ttk.Frame):
         self.vcmd = (self.register(self._validate), "%P")
         self.ValidateE = ValidateE
         
-        self.WidgetDefaults = {'type' : "Entry", 
-                               'entry' : {"Options" : {'justify' : 'center'}}, 
-                               'list' : {"Options" : {}},
-                               'label' : {"Options" : {"justify" : "left", "borderwidth" : 0, "highlightthickness" : 0}},
+        self.WidgetDefaults = {'type' :   "Entry", 
+                               'entry' :  {"Options" : {'justify' : 'center'}}, 
+                               'list' :   {"Options" : {}},
+                               'label' :  {"Options" : {"justify" : "left", "borderwidth" : 0, "highlightthickness" : 0}},
                                'button' : {"Options" : {"text" : "BUTTON", "justify" : "center"}}}
 
         self.AdjSize = AdjSize #AdjSize - General Options
-        
-        self.Master = Master
+        self.Master  = Master
         
         self.CreateTable()
     
@@ -1107,7 +1168,8 @@ class MultiTableInput(ttk.Frame):
                 else:
                     w = Entry(self.Canvas.X, **self.WidgetDefaults["entry"]["Options"])
                 
-                if ("columnspan" not in Widget.keys() or Widget["columnspan"] != 0) and ("rowspan" not in Widget.keys() or Widget["rowspan"] != 0):
+                if ("columnspan" not in Widget.keys() or Widget["columnspan"] != 0) and ("rowspan" not in Widget.keys() 
+                                                                                         or Widget["rowspan"] != 0):
                     w.grid(row = row, column = column, padx = self.Pad[0], pady = self.Pad[1], 
                            ipadx = self.Pad[2], ipady = self.Pad[3], sticky = "NSWE", 
                            rowspan = ([Widget[x] for x in Widget.keys() if x.lower() == "rowspan"]+[1])[0],
@@ -1136,9 +1198,11 @@ class MultiTableInput(ttk.Frame):
             current_row = []
             for column in range(columns[i]):
                 index = (row, column)
-                if self.WidgetOpt[row][column]["type"].lower() == "list" or self.WidgetOpt[row][column]["type"].lower() == "entry":
+                if self.WidgetOpt[row][column]["type"].lower() == "list" or 
+                       self.WidgetOpt[row][column]["type"].lower() == "entry":
                     current_row.append(self._Widgets[index].get()) 
-                elif self.WidgetOpt[row][column]["type"].lower() == "label" and "textvariable" in self.WidgetOpt[row][column].keys():
+                elif self.WidgetOpt[row][column]["type"].lower() == "label" and "textvariable" in 
+                                                                self.WidgetOpt[row][column].keys():
                     current_row.append(self._LabelVars[index].get())
                 elif "text" in self.WidgetOpt[row][column]["Options"].keys():
                     current_row.append(self.WidgetOpt[row][column]["Options"]["text"])                    
@@ -1158,7 +1222,8 @@ class MultiTableInput(ttk.Frame):
         
         self.CreateTable()
         if not Clear and AltFill == []: 
-            self.FillData([[y for n,y in x in n < len(self.WidgetOpt[i])] for i,x in enumerate(Current) if i < len(self.WidgetOpt)])
+            self.FillData([[y for n,y in x in n < len(self.WidgetOpt[i])] for i,x in enumerate(Current) 
+                           if i < len(self.WidgetOpt)])
         elif not Clear and AltFill != []: 
             self.FillData(AltFill)
         else:
@@ -1189,7 +1254,8 @@ class MultiTableInput(ttk.Frame):
                             self._Widgets[index].insert(0, value)
                         elif self.WidgetOpt[x][y]["type"].lower() == "list":
                             self._Widgets[index].set(value)
-                        elif self.WidgetOpt[x][y]["type"].lower() == "label" and "textvariable" in self.WidgetOpt[x][y].keys():
+                        elif self.WidgetOpt[x][y]["type"].lower() == "label" and "textvariable" in 
+                                                                        self.WidgetOpt[x][y].keys():
                             self._LabelVars[index].set(value)
                         elif self.WidgetOpt[x][y]["type"].lower() == "button":
                             self._Widgets[index].config(text = value)
@@ -1283,7 +1349,7 @@ class CustomNotebook(ttk.Notebook):
         
         self.images = (
         
-           PhotoImage("img_close", data='''''' , height = SizeSet(100, {"windows":20, "others": 20}) , width = 10),#SizeSet(1, {"windows":1, "others": 1})),
+           PhotoImage("img_close", data='''''' , height = SizeSet(100, {"windows":20, "others": 20}) , width = 10)
            
            PhotoImage("img_close2", data='''
                 R0lGODlhCAAIAMIEAAAAAP/SAP/bNNnZ2cbGxsbGxsbGxsbGxiH5BAEKAAQALAAA
@@ -1358,8 +1424,9 @@ class MainGUI:
         
         #Defualt Fonts - For use if word length and word wrapping need to be set
         #tkFont.Font(font='TkDefaultFont').configure()
-        self.FONT = tkFont.Font(family = 'DejaVu Sans', weight = 'normal', slant = 'roman', overstrike = 0, underline = 0, size = -SizeSet(18, {"windows": 9}))
-	    
+        self.FONT = tkFont.Font(family = 'DejaVu Sans', weight = 'normal', slant = 'roman', overstrike = 0, 
+                                underline = 0, size = -SizeSet(18, {"windows": 9}))
+   
         self.Pages = []
         self.PageW = {}
         self.GraphOpt = {}
@@ -1369,10 +1436,12 @@ class MainGUI:
                            {"type" : "label", "Options" : {"text" : "Type"}}, 
                            {"type" : "label", "Options" : {"text" : "Days"}},
                            {"type" : "label", "Options" : {"text" : "Options"}}], 
-                          [{"type" : "list", "Options" : {}, "State" : "", "postcommand" : "Location", "ComboList" : self.PL + self.SL + ["Estimation"]},
+                          [{"type" : "list", "Options" : {}, "State" : "", "postcommand" : "Location", 
+                            "ComboList" : self.PL + self.SL + ["Estimation"]},
                            {"type" : "list", "Options" : {}, "State" : "", "ComboList" : self.TypeOptions},
                            {"type" : "entry", "Options" : {}},
-                           {"type" : "list", "Options" : {}, "State" : "", "postcommand" : "Options_", "ComboList" : self.DefOptions, "TAG": True}]]
+                           {"type" : "list", "Options" : {}, "State" : "", "postcommand" : "Options_", 
+                            "ComboList" : self.DefOptions, "TAG": True}]]
 
         self.Vars = Vars
         
@@ -1396,7 +1465,7 @@ class MainGUI:
         #Binding for detection of changes to add or delete
         self.nb.bind("<<NotebookTabChanged>>", self.NDCheck)
         self.nb.enable_traversal()
-    #________________________________________Sub Class Functions
+    #________________________________________Sub Class Functions________________________________________
     
     def NDCheck(self, evt):
         #Checks if "+" is pressed
@@ -1428,51 +1497,61 @@ class MainGUI:
         GridMake(self.Pages[Ref], self.GridRows, self.GridColumns, self.Res, (self.GridRows-1)/self.GridRows)
         
         #Current Status (Bottom)
-        self.PageW[Ref].update({"CS": MultiTableInput(self.Pages[Ref], [[self.BaseCS]], SizeSet([1,1,.6,.1], {"android": [1,1,.6,.15]}, self.Res), [0.1, 0.1, 0, 0], True, True, Master = self)})
-        self.PageW[Ref]["CS"].grid(row = SizeSet(40, {"android": 35}), column = 0, rowspan = SizeSet(10,{"android":15}), columnspan = 60, sticky = 'NSEW')
+        self.PageW[Ref].update({"CS": MultiTableInput(self.Pages[Ref], [[self.BaseCS]], SizeSet([1,1,.6,.1], 
+                               {"android": [1,1,.6,.15]}, self.Res), [0.1, 0.1, 0, 0], True, True, Master = self)})
+        self.PageW[Ref]["CS"].grid(row = SizeSet(40, {"android": 35}), column = 0, rowspan = SizeSet(10,{"android":15}),
+                                   columnspan = 60, sticky = 'NSEW')
         self.PageW[Ref]["CS"].Update([[self.BaseCS]],False,False,[["Waiting for input..."]])
         
         #Main Table_______________________________________________________________________________________
-        self.PageW[Ref].update({"MainTable": MultiTableInput(self.Pages[Ref], self.Tag(self.BaseTable, Ref), SizeSet([4, 20, .4, .82], {"android": [4, 9,.4,.82]}, self.Res), [0.2, 0.2, 0, 0], True, True, Master = self)})
+        self.PageW[Ref].update({"MainTable": MultiTableInput(self.Pages[Ref], self.Tag(self.BaseTable, Ref), 
+                                SizeSet([4, 20, .4, .82], {"android": [4, 9,.4,.82]}, self.Res), [0.2, 0.2, 0, 0], 
+                                                             True, True, Master = self)})
         self.PageW[Ref]["MainTable"].grid(row = 5, column = 60, rowspan = 41, columnspan = 40, sticky = 'NEWS')
         
         #Graph Button
-        self.PageW[Ref].update({"GButton" : Button(self.Pages[Ref], text = "Graph", command = lambda: self.CreateGraph(self.PageW[Ref]["MainTable"], Ref))})
+        self.PageW[Ref].update({"GButton" : Button(self.Pages[Ref], text = "Graph", 
+                                command = lambda: self.CreateGraph(self.PageW[Ref]["MainTable"], Ref))})
         self.PageW[Ref]["GButton"].grid(row = 0, column = 80 , rowspan = 5, columnspan = 20, sticky = 'NEWS')
         
         #Add Row Button
-        self.PageW[Ref].update({"ARButton" : Button(self.Pages[Ref], text = "+", width = 3, command = lambda: self.MainTableAddRow(self.PageW[Ref]["MainTable"], self.BaseTable))}) 
+        self.PageW[Ref].update({"ARButton" : Button(self.Pages[Ref], text = "+", width = 3, 
+                                command = lambda: self.MainTableAddRow(self.PageW[Ref]["MainTable"], self.BaseTable))}) 
         self.PageW[Ref]["ARButton"].grid(row = 46, column = 60 , rowspan = 4, columnspan = 4, sticky = 'NEWS')
         
         #Remove Row Button
-        self.PageW[Ref].update({"RRButton" : Button(self.Pages[Ref], text = "-", width = 3, command = lambda: self.MainTableRemoveRow(self.PageW[Ref]["MainTable"], self.BaseTable))}) 
+        self.PageW[Ref].update({"RRButton" : Button(self.Pages[Ref], text = "-", width = 3, 
+                                command = lambda: self.MainTableRemoveRow(self.PageW[Ref]["MainTable"], self.BaseTable))}) 
         self.PageW[Ref]["RRButton"].grid(row = 46, column = 64 , rowspan = 4, columnspan = 4, sticky = 'NEWS')
-        
-        #Reset All Button
-        #self.PageW[Ref].update({"RRButton" : Button(self.Pages[Ref], text = "Reset", width = 10, command = lambda: self.PageW[Ref]["MainTable"].Update(self.BaseTable , False, True))})
-        #self.PageW[Ref]["RRButton"].grid(row = 44, column = 65 , rowspan = 3, columnspan = 34, sticky = 'NEWS')
         
         #Preview Frame_______________________________________________________________
         self.PageW[Ref].update({"PreviewFrame" : Label(self.Pages[Ref], text = "<>")})
-        self.PageW[Ref]["PreviewFrame"].grid(row = 5, column = 0, rowspan = SizeSet(35,{"android":30}), columnspan = 60, sticky= "NSWE")
+        self.PageW[Ref]["PreviewFrame"].grid(row = 5, column = 0, rowspan = SizeSet(35,{"android":30}), 
+                                             columnspan = 60, sticky= "NSWE")
         
         #Retrieve Data
-        self.PageW[Ref].update({"RDButton" : Button(self.Pages[Ref], text = "Retrieve Data", command = lambda: self.GetData())})
+        self.PageW[Ref].update({"RDButton" : Button(self.Pages[Ref], text = "Retrieve Data", 
+                                                    command = lambda: self.GetData())})
         self.PageW[Ref]["RDButton"].grid(row = 0, column = 0 , rowspan = 5, columnspan = 20, sticky = 'NEWS')
         
         #Log Y
-        self.PageW[Ref].update({"LogYButton" : Button(self.Pages[Ref], text = "Toggle Log Y Axis", command = lambda: self.Toggle(self.GraphOpt[Ref],"LOGY",self.PageW[Ref]["MainTable"], Ref))})
+        self.PageW[Ref].update({"LogYButton" : Button(self.Pages[Ref], text = "Toggle Log Y Axis", 
+                                command = lambda: self.Toggle(self.GraphOpt[Ref],"LOGY",self.PageW[Ref]["MainTable"], Ref))})
         self.PageW[Ref]["LogYButton"].grid(row = 0, column = 20 , rowspan = 5, columnspan = 20, sticky = 'NEWS')
         
         #Set all 0
-        self.PageW[Ref].update({"ZeroButton" : Button(self.Pages[Ref], text = "Set to common x = 0", command = lambda: self.Toggle(self.GraphOpt[Ref],"ZeroX",self.PageW[Ref]["MainTable"], Ref))})
+        self.PageW[Ref].update({"ZeroButton" : Button(self.Pages[Ref], text = "Set to common x = 0", 
+                                command = lambda: self.Toggle(self.GraphOpt[Ref],"ZeroX",self.PageW[Ref]["MainTable"], Ref))})
         self.PageW[Ref]["ZeroButton"].grid(row = 0, column = 40 , rowspan = 5, columnspan = 20, sticky = 'NEWS')
         
         #Save Graph
-        self.PageW[Ref].update({"SaveGraphButton" : Button(self.Pages[Ref], text = "Save Graph", command = lambda: self.SaveGraph(self.PageW[Ref]["MainTable"], Ref))})
+        self.PageW[Ref].update({"SaveGraphButton" : Button(self.Pages[Ref], text = "Save Graph", 
+                                                    command = lambda: self.SaveGraph(self.PageW[Ref]["MainTable"], Ref))})
         self.PageW[Ref]["SaveGraphButton"].grid(row = 0, column = 60 , rowspan = 5, columnspan = 20, sticky = 'NEWS')
         
-        self.GraphOpt.update({Ref: {"LOGY": False, "ZeroX" : False, "Save" : None, "FilledGraph" : [], "DateLines":["1/22/20", dt.now()]}})
+        #"1/22/20"
+        self.GraphOpt.update({Ref: {"LOGY": False, "ZeroX" : False, "Save" : None, "FilledGraph" : [], 
+                                    "DateLines":[dt.now()]}})
         Settings.update({Ref:[]})
         
         if Load != None: self.PageW[Ref]["MainTable"].Update(self.Tag(Load[0], Ref, True), False, False, Load[1])
@@ -1483,9 +1562,13 @@ class MainGUI:
     def Tag(self, Addons, Tag = 0, ClearOld = False):
         Tag = str(Tag)
         if ClearOld:
-            Addons = [[y if i!=3 else {z: y[z] if not isinstance(y[z], str) or len(y[z])<1 or "_" not in y[z] else "%s_%s" % (y[z].split("_")[0], Tag) for z in y.keys()} for i,y in enumerate(x)] for x in Addons]
+            Addons = [[y if i!=3 else {z: y[z] if not isinstance(y[z], str) or len(y[z])<1 or "_" not in y[z] else 
+                                       "%s_%s" % (y[z].split("_")[0], Tag) for z in y.keys()} for i,y in enumerate(x)] 
+                      for x in Addons]
         else:
-            Addons = [[y if "TAG" not in y.keys() else {z: y[z] if not isinstance(y[z], str) or len(y[z])<1 or y[z][-1] != "_" else "%s%s" % (y[z], Tag) for z in y.keys()} for y in x] for x in Addons]       
+            Addons = [[y if "TAG" not in y.keys() else {z: y[z] 
+                                                        if not isinstance(y[z], str) or len(y[z])<1 or y[z][-1] != "_" else
+                                                        "%s%s" % (y[z], Tag) for z in y.keys()} for y in x] for x in Addons]       
         return Addons
     
     def Toggle(self, D, Key, Graph = None, Ref = None, A = True, B = False):
@@ -1533,25 +1616,33 @@ class MainGUI:
         #Estimation Data
         ESTs = {}
         for x in ESTx.keys():
-            ESTs.update({x: {y:max(ESTx[x][y]) if isinstance(ESTx[x][y], list) and ESTx[x][y] != [] else ESTx[x][y] for y in ESTx[x].keys()}})
+            ESTs.update({x: {y:max(ESTx[x][y]) if isinstance(ESTx[x][y], list) and ESTx[x][y] != [] 
+                             else ESTx[x][y] for y in ESTx[x].keys()}})
         
         if Opt["ZeroX"] == True:
-            Lim0 = 10 #10 seems to aim a bit low for non uncontrolled growth - make adjustable************ - changed to death instead of confirmed (this does not change estimation as well though - should have an additional factor for confirmed vs. death time and growtg rate used 10 for now
+            Lim0 = 10 
+            #10 seems to aim a bit low for non uncontrolled growth - make adjustable************ - changed to death instead of confirmed (this does not change estimation as well though - should have an additional factor for confirmed vs. death time and growth rate used 10 for now
             
-            SD0 = [ [i for i,y in enumerate(self.Data[P][x[0]][D]) if y > Lim0] if x[0] in self.PL else [i for i,y in enumerate(self.Data[St][x[0]][D]) if y > Lim0] if x[0] in self.SL else max(int(self.Vars[x[3]]["Start Date"]) + MI(self.Vars[x[3]]["Average time to death"])  + 10 , 0) for x in SubData]
-            SD0 = [0 if x == [] else x[0] if isinstance(x,list) else x for x in SD0]
+            SD0  = [[i for i,y in enumerate(self.Data[P][x[0]][D]) if y > Lim0] if x[0] in self.PL else 
+                    [i for i,y in enumerate(self.Data[St][x[0]][D]) if y > Lim0] if x[0] in self.SL else
+                    max(int(self.Vars[x[3]]["Start Date"]) + MI(self.Vars[x[3]]["Average time to death"])  + 10 , 0) 
+                    for x in SubData]
+            SD0   = [0 if x == [] else x[0] if isinstance(x,list) else x for x in SD0]
             LineD = []
         else:
             SD0 = [0 for x in SubData]
             LineD = Opt["DateLines"]
 
         self.PageW[Ref]["PlotClass"] = GPlot([[self.Data["Time"][:int(x[2])-SD0[i]],
-                                    self.Data[P][x[0]][x[1]][SD0[i]:int(x[2]) + SD0[i]]] if x[0] in self.PL 
-                                   else [self.Data["Time"][:int(x[2])-SD0[i]],
-                                         self.Data[St][x[0]][x[1]][SD0[i]:int(x[2]) + SD0[i]]] if x[0] in self.SL 
-                                   else [[y + max(int(self.Vars[x[3]]["Start Date"]),0) - SD0[i] for y in ESTx[x[3]]["Time"][:int(x[2]) - int(self.Vars[x[3]]["Start Date"])]], 
-                                         ESTx[x[3]][x[1]][:int(x[2]) - int(self.Vars[x[3]]["Start Date"])]] for i,x in enumerate(SubData)], 
-                                  LineD, ["%s - %s" % (x[0], x[1]) for x in SubData], LOGY = Opt["LOGY"], FillR = Opt["FilledGraph"])
+                                       self.Data[P][x[0]][x[1]][SD0[i]:int(x[2]) + SD0[i]]] if x[0] in self.PL 
+                                       else [self.Data["Time"][:int(x[2])-SD0[i]],
+                                       self.Data[St][x[0]][x[1]][SD0[i]:int(x[2]) + SD0[i]]] if x[0] in self.SL 
+                                       else [[y + max(int(self.Vars[x[3]]["Start Date"]),0) - SD0[i] 
+                                       for y in ESTx[x[3]]["Time"][:int(x[2]) - int(self.Vars[x[3]]["Start Date"])]], 
+                                       ESTx[x[3]][x[1]][:int(x[2]) - int(self.Vars[x[3]]["Start Date"])]] 
+                                       for i,x in enumerate(SubData)], 
+                                       LineD, ["%s - %s" % (x[0], x[1]) for x in SubData], 
+                                       LOGY = Opt["LOGY"], FillR = Opt["FilledGraph"])
         
         SubData={"Plot": []}
         SubData["Plot"] = self.PageW[Ref]["PlotClass"].fig
@@ -1613,39 +1704,44 @@ class MainGUI:
         for x in self.PageW.keys():
             t = self.PageW[x]["MainTable"].get()
             z = self.PageW[x]["MainTable"].WidgetOpt
-            z = [[{u:w[u] if u != "ComboList" else self.PL + self.SL + ["Estimation"] for u in w.keys()} if i==0 and n!=0 else w for i,w in enumerate(q)] for n,q in enumerate(z)]
+            z = [[{u:w[u] if u != "ComboList" else self.PL + self.SL + ["Estimation"] for u in w.keys()} 
+                  if i==0 and n!=0 else w for i,w in enumerate(q)] for n,q in enumerate(z)]
             self.PageW[x]["MainTable"].Update(z, False, False, t)
             
-        self.BaseTable = [[{u:w[u] if u != "ComboList" else self.PL + self.SL + ["Estimation"] for u in w.keys()} if i==0 and n!=0 else w for i,w in enumerate(q)] for n,q in enumerate(self.BaseTable)]
+        self.BaseTable = [[{u:w[u] if u != "ComboList" else self.PL + self.SL + ["Estimation"] for u in w.keys()} 
+                           if i==0 and n!=0 else w for i,w in enumerate(q)] for n,q in enumerate(self.BaseTable)]
     
     def Save(self):
         with open("COVID_WIP.txt", "w") as WF:
-            WF.write(str({"Tables":{x: str([self.PageW[x]["MainTable"].WidgetOpt, self.PageW[x]["MainTable"].get()]) for x in self.PageW.keys() if str(self.PageW[x]["MainTable"]).split(".!multi")[0] in [str(y) for y in self.nb.tabs()]}, "Vars": str(self.Vars), "Data": str(self.Data), "PL": str(self.PL), "SL": str(self.SL)}))
+            WF.write(str({"Tables":{x: str([self.PageW[x]["MainTable"].WidgetOpt, self.PageW[x]["MainTable"].get()]) 
+                                    for x in self.PageW.keys() if str(self.PageW[x]["MainTable"]).split(".!multi")[0] 
+                                    in [str(y) for y in self.nb.tabs()]}, "Vars": str(self.Vars), "Data": str(self.Data),
+                          "PL": str(self.PL), "SL": str(self.SL)}))
 
             
-SVarD = {"Base": {"Start Date": 0, 
-         "Growth Rate": 2.0, 
-         "Death Rate": 0.01, 
-         "Death Rate - Health care system overran": 0.04, 
-         "Health care system overrun # of sick": MI(12*7.7e5), 
-         "Social Distancing - Change Dates": [], 
-         "Social Distancing - Change": [], 
-         "Population": 7.7e9, 
-         "Average time to death": 14, 
-         "Average time to recovery": 31, 
-         "Average time to detection": 10,
-         "Normal daily mortality rate (per million)": 8.1,
-         "Normal ICU survial rate": .477,
-         "No ICU available survial rate": .24,
-         "Normal ICU need by day": MI(4e6/365),
-         "Average infected to symptoms": 3.5,
-         "COVID ICU need rate": 0.05,
-         "Average Effective Immunity Duraration": 180, 
-         "Compartment Size": 1e6,
-         "Mean Infection Time" : 5, 
-         "Average detection rate of non ICU or deaths": .9,
-         "Non symptoms recovery ratio":.9,
-         "Average time to recovery - Sigma": 10}}
+SVarD = {"Base": {"Start Date":                                  0, 
+                  "Growth Rate":                                 2.0, 
+                  "Death Rate":                                  0.01, 
+                  "Death Rate - Health care system overran":     0.04, 
+                  "Health care system overrun # of sick":        MI(12*7.7e5), 
+                  "Social Distancing - Change Dates":            [], 
+                  "Social Distancing - Change":                  [], 
+                  "Population":                                  7.7e9, 
+                  "Average time to death":                       14, 
+                  "Average time to recovery":                    31, 
+                  "Average time to detection":                   10,
+                  "Normal daily mortality rate (per million)":   8.1,
+                  "Normal ICU survial rate":                     .477,
+                  "No ICU available survial rate":               .24,
+                  "Normal ICU need by day":                      MI(4e6/365),
+                  "Average infected to symptoms":                3.5,
+                  "COVID ICU need rate":                         0.05,
+                  "Average Effective Immunity Duraration":       180, 
+                  "Compartment Size":                            1e6,
+                  "Mean Infection Time" :                        5, 
+                  "Average detection rate of non ICU or deaths": .9,
+                  "Non symptoms recovery ratio":                 .9,
+                  "Average time to recovery - Sigma":            10}}
 
 def VarUp(SVar):
     for x in SVar.keys(): 
@@ -1656,7 +1752,7 @@ def VarUp(SVar):
     return SVar         
     
 #____________________________________________________________________________________________________________
-#Main Run Line
+#Main Run Lines
 
 #Determine operating system (for mobile vs. PC)
 if "android" in str(platform).lower():
@@ -1678,9 +1774,9 @@ if os.path.exists("COVID_WIP.txt"):
             Data = ast.literal_eval(RF.read())
         SVars  = ast.literal_eval(Data["Vars"])
         Tables = {x: ast.literal_eval(Data["Tables"][x]) for x in Data["Tables"].keys()}
-        PL       = ast.literal_eval(Data["PL"])
-        SL       = ast.literal_eval(Data["SL"])
-        Data     = ast.literal_eval(Data["Data"])
+        PL     = ast.literal_eval(Data["PL"])
+        SL     = ast.literal_eval(Data["SL"])
+        Data   = ast.literal_eval(Data["Data"])
     except:
         pass
     
@@ -1691,8 +1787,10 @@ if len([x for x in CLI if ".json" in x]) > 0 or len([x for x in CLI if ".json" n
     main.title('COVID-19 Tracker')
     
     #Base screen info
-    Settings["Size"] = [max(main.winfo_screenwidth(), main.winfo_screenheight()), min(main.winfo_screenwidth(), main.winfo_screenheight())] # meant for widescreen use. note pixel4 is  2148 1080
-    
+    #Meant for widescreen use 
+    #Note: Pixel4 is  2148 1080
+    Settings["Size"] = [max(main.winfo_screenwidth(), main.winfo_screenheight()), 
+                        min(main.winfo_screenwidth(), main.winfo_screenheight())] 
     Settings["Size"] = SizeSet(Settings["Size"], OSFlag = {"windows": [1200, 600]})
     
     #Full screen if it is android (or others)
@@ -1703,8 +1801,3 @@ if len([x for x in CLI if ".json" in x]) > 0 or len([x for x in CLI if ".json" n
 else:
     #Command Line Interface
     sys.exit("Not yet implemented")
-
-#Modify can be passed to Var fix this
-#Finish "Special" Operations button integration
-#Redo General Info Display (split using a multitable with scroll)
-
